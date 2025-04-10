@@ -1,0 +1,17 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome to HearMe</title>
+    <link rel="stylesheet" href="{% static 'chatbot/css/welcome.css' %}">
+</head>
+<body>
+    <div class="welcome-box">
+        <h1>Welcome to HearMe</h1>
+        <img src="{% static 'chatbot/images/HearMe_Lgo.png' %}"  class="logo"> <br> <br><br><br><br><br>
+        <a href="{% url 'login' %}">Sign In</a>
+        <a href="{% url 'signup' %}">Sign Up</a>
+    </div>
+</body>
+</html>

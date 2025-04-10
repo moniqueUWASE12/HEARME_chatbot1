@@ -1,0 +1,200 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HearMe Chatbot</title>
+    <!-- Link your CSS -->
+    <link rel="stylesheet" type="text/css" href="{% static 'chatbot/css/styles.css' %}">
+</head>
+<body>
+    <div class="main-container">
+        <!-- Sidebar on the left -->
+        <div class="sidebar">
+            <div class="new-chat" onclick="startNewChat()">
+                <i>🗨️</i> New Chat
+            </div>
+            <h3>Recent Conversations</h3>
+            <div id="recentConversations">
+                <!-- Recent messages will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Chat container on the right -->
+        <div class="chat-container">
+            <div class="chat-header">
+                <img src="{% static 'chatbot/images/HearMe_Lgo.png' %}"  class="logo">
+                HearMe
+
+                <div class="user-profile">
+                    <div class="profile-dropdown">
+                        <button class="profile-button" onclick="toggleDropdown()">
+                            <img src="{% static 'chatbot/images/user-icon.avif' %}" alt="User Icon" class="profile-icon" title="{{ username }}">
+                        </button>
+                        <div class="dropdown-content" id="dropdownMenu">
+                            <form method="POST" action="{% url 'logout' %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" style="background: none; border: none; color: black; cursor: pointer; padding: 0;">
+                                    Logout
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-box" id="chatBox">
+                <div class="message ai-message">
+                    Hello <b>{{ username }}</b>! How can I assist you today? 😊
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="userInput" placeholder="Ask something...">
+                <button onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+    </div>
+   
+
+    <script>
+        const chatBox = document.getElementById("chatBox");
+        const recentConversations = document.getElementById("recentConversations");
+    
+        function getCsrfToken() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') {
+                    return value;
+                }
+            }
+            return null;
+        }
+    
+        let isConversationAdded = false; // Track if a conversation title has already been added
+        const conversations = []; // Array to store conversations
+    
+        function addToRecent(userInput) {
+            // Only add the first user input as the title
+            if (!isConversationAdded) {
+                const title = userInput;
+    
+                // Create a new div for the recent conversation
+                const chatItem = document.createElement("div");
+                chatItem.classList.add("recent-chat");
+                chatItem.innerText = title;
+    
+                // Add a click event to load the conversation
+                chatItem.onclick = () => loadConversation(conversations);
+    
+                // Prepend the new chat item to the recent conversations list
+                recentConversations.prepend(chatItem);
+    
+                // Mark the conversation as added
+                isConversationAdded = true;
+            }
+        }
+    
+        function sendMessage() {
+            const userInput = document.getElementById("userInput").value;
+            if (userInput.trim() === "") return;
+    
+            const userMsg = document.createElement("div");
+            userMsg.classList.add("message", "user-message");
+            userMsg.innerText = userInput;
+            chatBox.appendChild(userMsg);
+    
+            // Add the user's message to the conversation array
+            conversations.push({ type: "user", text: userInput });
+    
+            document.getElementById("userInput").value = "";
+    
+            const typingIndicator = document.createElement("div");
+            typingIndicator.classList.add("message", "ai-message");
+            typingIndicator.innerText = "Typing...";
+            chatBox.appendChild(typingIndicator);
+    
+            chatBox.scrollTop = chatBox.scrollHeight;
+    
+            setTimeout(() => {
+                fetch('/chatbot/response/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: 'user_input=' + encodeURIComponent(userInput),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    chatBox.removeChild(typingIndicator);
+                    const aiMsg = document.createElement("div");
+                    aiMsg.classList.add("message", "ai-message");
+    
+                    if (data.ai_response.includes("Watch here:")) {
+                        const parts = data.ai_response.split("Watch here:");
+                        aiMsg.innerHTML = parts[0] + `<br><iframe width="300" height="200" src="${parts[1].trim()}" frameborder="0" allowfullscreen></iframe>`;
+                    } else {
+                        aiMsg.innerText = data.ai_response;
+                    }
+    
+                    chatBox.appendChild(aiMsg);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+    
+                    // Add the AI's response to the conversation array
+                    conversations.push({ type: "ai", text: data.ai_response });
+    
+                    // Store the user input in recent conversations
+                    addToRecent(userInput);
+                })
+                .catch(error => {
+                    chatBox.removeChild(typingIndicator);
+    
+                    const errorMsg = document.createElement("div");
+                    errorMsg.classList.add("message", "ai-message");
+                    errorMsg.innerText = "Sorry, something went wrong.";
+                    chatBox.appendChild(errorMsg);
+    
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                });
+            }, 500);
+        }
+    
+        function loadConversation(conversation) {
+            chatBox.innerHTML = "";
+            conversation.forEach(msg => {
+                const messageDiv = document.createElement("div");
+                messageDiv.classList.add("message", msg.type === "user" ? "user-message" : "ai-message");
+                messageDiv.innerText = msg.text;
+                chatBox.appendChild(messageDiv);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    
+        function startNewChat() {
+            chatBox.innerHTML = '<div class="message ai-message">Hello <b>{{ username }}</b>! How can I assist you today? 😊</div>';
+            isConversationAdded = false;
+            conversations.length = 0;
+        }
+    
+        document.getElementById("userInput").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
+    
+        function toggleDropdown() {
+            const dropdown = document.querySelector('.profile-dropdown');
+            dropdown.classList.toggle('active');
+        }
+    
+        window.addEventListener('click', function (event) {
+            const dropdown = document.querySelector('.profile-dropdown');
+            if (!dropdown.contains(event.target)) {
+                dropdown.classList.remove('active');
+            }
+        });
+    </script>
+    
+</body>
+</html>

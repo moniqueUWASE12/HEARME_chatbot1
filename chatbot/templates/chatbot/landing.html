@@ -1,0 +1,52 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome to HearMe</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'chatbot/css/styles.css' %}">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+        }
+        .welcome-container {
+            text-align: center;
+            background: white;
+            padding: 3rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .welcome-container h1 {
+            margin-bottom: 1rem;
+        }
+        .welcome-container button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .welcome-container button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-container">
+        <h1>Hello <b>{{ username }}</b>! 👋</h1>
+        <p>How can I assist you today? 😊</p>
+        <form method="get" action="{% url 'chat_page' %}">
+            <button type="submit">Start Chat</button>
+        </form>
+    </div>
+</body>
+</html>
