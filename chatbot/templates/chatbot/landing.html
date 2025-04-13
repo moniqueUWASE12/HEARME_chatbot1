@@ -42,11 +42,11 @@
 </head>
 <body>
     <div class="welcome-container">
-        <h1>Hello <b>{{ username }}</b>! 👋</h1>
-        <p>How can I assist you today? 😊</p>
-        <form method="get" action="{% url 'chat_page' %}">
-            <button type="submit">Start Chat</button>
-        </form>
+        <h1>Hello {{ user.username }} 👋</h1>
+    <p>This is your safe space. Ready to talk?</p>
+    <a href="{% url 'chat' %}">
+        <button>Start Chat</button>
+    </a>
     </div>
 </body>
 </html>

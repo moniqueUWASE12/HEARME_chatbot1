@@ -1,6 +1,5 @@
 from django.shortcuts import render, redirect
-from django.http import JsonResponse
-from django.http import HttpResponse
+from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import authenticate, login  # Import authenticate and login
 from django.contrib import messages  # Import messages for error handling
 from chatterbot import ChatBot
@@ -14,15 +13,24 @@ from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout
-from .models import UserProfile
-from .models import Conversation
+from .models import UserProfile, Conversation
+from chatterbot.comparisons import LevenshteinDistance
+from chatterbot.response_selection import get_most_frequent_response
 
 
 # Initialize the ChatBot
-bot = ChatBot('chatbot', read_only=False, logic_adapters=['chatterbot.logic.BestMatch'])
+bot = ChatBot('chatbot', read_only=False, logic_adapters=[ {
+            'import_path': 'chatterbot.logic.BestMatch',
+            'maximum_similarity_threshold': 0.90,
+            'statement_comparison_function': LevenshteinDistance,
+            'response_selection_method': get_most_frequent_response
+        }])
 
 def welcome_view(request):
     return render(request, 'chatbot/welcome.html')
+
+def landing_view(request):
+    return render (request, 'chatbot/landing.html')
 
 def login_view(request):
     if request.method == "POST":
@@ -31,10 +39,11 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)  # Authenticate user
         if user is not None:
             login(request, user)  # Log the user in
-            return redirect("chatbot_view")  # Redirect to the index.html view
+            return redirect("chatbot_view")  # Redirect to the landing.html view
         else:
             messages.error(request, "Invalid username or password.")  # Display error message
-    return render(request, "chatbot/login.html")
+    return render(request, 'chatbot/login.html')
+
 
 def signup_view(request):
     if request.method == "POST":
@@ -133,3 +142,21 @@ def chatbot_ai_response(request):
 def custom_logout_view(request):
     logout(request)
     return redirect('login')  # Redirect to the login page
+
+def get_response(message):
+    response = bot.get_response(message)
+    return str(response)
+
+# Example usage
+if __name__ == "__main__":
+    print("HearMe is ready! Type 'exit' to end the conversation.")
+    print("Bot: Hi, I'm HearMe. How are you feeling today?")
+    
+    while True:
+        user_input = input("You: ")
+        if user_input.lower() == 'exit':
+            print("Bot: Take care of yourself. I'm always here when you need to talk.")
+            break
+        
+        response = get_response(user_input)
+        print(f"Bot: {response}")
