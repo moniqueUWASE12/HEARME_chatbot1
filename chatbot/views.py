@@ -16,15 +16,36 @@ from django.contrib.auth import login, logout
 from .models import UserProfile, Conversation
 from chatterbot.comparisons import LevenshteinDistance
 from chatterbot.response_selection import get_most_frequent_response
+from textblob import TextBlob
+
 
 
 # Initialize the ChatBot
-bot = ChatBot('chatbot', read_only=False, logic_adapters=[ {
+bot = ChatBot(
+    'HearMe',
+    read_only=False,
+    logic_adapters=[
+        {
             'import_path': 'chatterbot.logic.BestMatch',
-            'maximum_similarity_threshold': 0.90,
+            'default_response': "I'm here to listen. Could you tell me more about what you're experiencing?",
+            'maximum_similarity_threshold': 0.75,  # Slightly lowered to catch more variations
             'statement_comparison_function': LevenshteinDistance,
             'response_selection_method': get_most_frequent_response
-        }])
+        },
+        {
+            'import_path': 'chatterbot.logic.SpecificResponseAdapter',
+            'input_text': 'help me',
+            'output_text': "I'm here to help. What's troubling you today?"
+        }
+    ],
+
+    preprocessors=[
+        'chatterbot.preprocessors.clean_whitespace',
+        'chatterbot.preprocessors.convert_to_ascii',
+        'chatterbot.preprocessors.unescape_html'
+    ]
+    
+    )
 
 def welcome_view(request):
     return render(request, 'chatbot/welcome.html')
@@ -103,6 +124,15 @@ def chatbot_ai_response(request):
     user_input = request.POST.get('user_input', '')
     user_input_lower = user_input.lower()
 
+    # Analyze sentiment
+    sentiment = TextBlob(user_input).sentiment
+    polarity = sentiment.polarity
+    sentiment_label = "Neutral"
+    if polarity > 0.1:
+        sentiment_label = "Positive"
+    elif polarity < -0.1:
+        sentiment_label = "Negative"
+
     # Check for therapist recommendation keywords
     if "therapist" in user_input_lower or "recommend" in user_input_lower:
         therapists = Therapist.objects.all()[:3]  # Fetch up to 3 entries
@@ -132,12 +162,15 @@ def chatbot_ai_response(request):
         # Standard chatbot response
         bot_response = bot.get_response(user_input)
         response_text = str(bot_response)
+
+    #response_text += f"\n\n🧠 Sentiment Analysis: {sentiment_label} (Polarity: {polarity:.2f})"
     
     # Save the conversation
     if request.user.is_authenticated:
         Conversation.objects.create(user=request.user, message=user_input, response=response_text)
-        
-    return JsonResponse({'ai_response': response_text})
+        return JsonResponse({'ai_response': response_text})
+    
+    
 
 def custom_logout_view(request):
     logout(request)

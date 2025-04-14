@@ -10,6 +10,7 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('signup/', views.signup_view, name='signup'),
     path('logout/', views.custom_logout_view, name='logout'),
+    #path('chatbot/get_response/', views.get_response, name='get_response'),
    
     
 

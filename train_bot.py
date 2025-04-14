@@ -2,83 +2,233 @@ from chatterbot import ChatBot
 from chatterbot.trainers import ListTrainer
 from chatterbot.comparisons import LevenshteinDistance
 from chatterbot.response_selection import get_most_frequent_response
+from datetime import datetime
+import logging
 
+# Set up logging for debugging purposes
+logging.basicConfig(level=logging.INFO)
 
-
-# Initialize the bot
+# Initialize the bot with improved settings
 bot = ChatBot(
-    'chatbot',
+    'HearMe',
     read_only=False,
-    logic_adapters=[ {
+    logic_adapters=[
+        {
             'import_path': 'chatterbot.logic.BestMatch',
-            'default_response': "I'm sorry, I don't quite understand. Could you rephrase that?",
-            'maximum_similarity_threshold': 0.90,
+            'default_response': "I'm here to listen. Could you tell me more about what you're experiencing?",
+            'maximum_similarity_threshold': 0.75,  # Slightly lowered to catch more variations
             'statement_comparison_function': LevenshteinDistance,
             'response_selection_method': get_most_frequent_response
-        }]
+        },
+        {
+            'import_path': 'chatterbot.logic.SpecificResponseAdapter',
+            'input_text': 'help me',
+            'output_text': "I'm here to help. What's troubling you today?"
+        }
+    ],
+
+    preprocessors=[
+        'chatterbot.preprocessors.clean_whitespace',
+        'chatterbot.preprocessors.convert_to_ascii',
+        'chatterbot.preprocessors.unescape_html'
+    ],
+    storage_adapter='chatterbot.storage.SQLStorageAdapter',
+    database_uri='sqlite:///hearme_database.sqlite3'
 )
 
-# Training data
-conversation_pairs = [
+# Organize training data by categories for better maintenance
+introduction_pairs = [
     ["Hello", "Hi, I'm HearMe. How are you feeling today?"],
-    ["I'm feeling sad", "I'm really sorry you're feeling this way. Sometimes talking about your feelings can help. What's on your mind?"],
-    ["I'm sad", "I'm really sorry you're feeling this way. Sometimes talking about your feelings can help. What's on your mind?"],
-    ["I feel sad", "I'm really sorry you're feeling this way. Sometimes talking about your feelings can help. What's on your mind?"],
-    ["I'm anxious", "It sounds like you're experiencing anxiety. Would you like some tips on how to relax or talk about what's causing it?"],
-    ["I feel anxious", "It sounds like you're experiencing anxiety. Would you like some tips on how to relax or talk about what's causing it?"],
-    ["I have anxiety", "It sounds like you're experiencing anxiety. Would you like some tips on how to relax or talk about what's causing it?"],
-    ["I feel alone", "It can be hard feeling isolated. Remember, I'm here to listen. Do you want to share more?"],
-    ["I'm lonely", "It can be hard feeling isolated. Remember, I'm here to listen. Do you want to share more?"],
-    ["I don't know what to do", "When things seem overwhelming, taking small steps can help. Tell me what is troubling you?"],
-    ["I'm stuck", "When things seem overwhelming, taking small steps can help. Tell me what is troubling you?"],
-    ["Can you recommend a therapist?", "I can help with that. Let me check for some available therapist recommendations for you."],
-    ["I need a therapist", "I can help with that. Let me check for some available therapist recommendations for you."],
-    ["Can you show me a video?", "Let me find a helpful video for you."],
-    ["I want to see a video", "Let me find a helpful video for you."],
-    ["Goodbye", "Take care of yourself. I'm always here when you need to talk."],
-    ["Bye", "Take care of yourself. I'm always here when you need to talk."],
-    ["Thank you", "You're welcome. I'm glad I could help."],
-    ["Thanks", "You're welcome. I'm glad I could help."],
-    ["I'm feeling so overwhelmed right now.", "I'm really sorry you're feeling this way. Can you tell me what's making you feel overwhelmed?"],
-    ["I'm overwhelmed", "I'm really sorry you're feeling this way. Can you tell me what's making you feel overwhelmed?"],
-    ["It's just everything. Work, family, and school. I can't handle it all.", "That sounds really tough. Would it help to talk about each one of them one by one?"],
-    ["I can't handle everything", "That sounds really tough. Would it help to talk about each one of them one by one?"],
-    ["Maybe... I can start with work.", "Okay, let's talk about work. What's been going on?"],
-    ["Let's talk about work", "Okay, let's talk about work. What's been going on?"],
-    ["I feel like I'm stuck in a rut.", "It can be frustrating to feel stuck. What do you think is keeping you there?"],
-    ["I'm in a rut", "It can be frustrating to feel stuck. What do you think is keeping you there?"],
-    ["I don't have motivation for anything.", "That sounds tough. Have you had time to relax and recharge?"],
-    ["I lack motivation", "That sounds tough. Have you had time to relax and recharge?"],
-    ["Not really. I've been pushing myself too hard.", "Pushing yourself can be exhausting. Maybe focusing on small tasks could help. What do you think?"],
-    ["I push myself too hard", "Pushing yourself can be exhausting. Maybe focusing on small tasks could help. What do you think?"],
-    ["I'm really anxious about the future.", "It's normal to feel anxious about the future. What exactly are you worried about?"],
-    ["The future worries me", "It's normal to feel anxious about the future. What exactly are you worried about?"],
-    ["I don't know what I'll do after I graduate.", "It's okay to be uncertain. Do you have any ideas of what you might want to do?"],
-    ["I'm uncertain about my career", "It's okay to be uncertain. Do you have any ideas of what you might want to do?"],
-    ["I'm not sure. I feel like I should know by now.", "That's okay. You don't have to have everything figured out. Taking small steps and being kind to yourself can help."],
-    ["I should know what to do by now", "That's okay. You don't have to have everything figured out. Taking small steps and being kind to yourself can help."]
-]
-
-# Additional conversation pairs for handling common greetings and questions
-additional_pairs = [
     ["Hi", "Hello! I'm HearMe. How are you feeling today?"],
     ["Hey", "Hi there! How are you doing today?"],
+    ["Good morning", "Good morning! How are you feeling today?"],
+    ["Good afternoon", "Good afternoon! How are you feeling today?"],
+    ["Good evening", "Good evening! How are you feeling today?"],
     ["How are you?", "I'm here to listen and help you. How are you feeling?"],
     ["Who are you?", "I'm HearMe, a supportive chat companion designed to listen and help with emotional concerns."],
     ["What can you do?", "I can listen to how you're feeling, offer support, and help you explore your emotions. What's on your mind today?"],
-    ["I'm stressed", "Stress can be really challenging. Can you tell me more about what's causing your stress?"],
-    ["I need help", "I'm here to help. What's going on that you'd like to talk about?"],
-    ["I'm depressed", "I'm sorry to hear you're feeling depressed. Have you been able to talk to anyone about how you're feeling?"],
-    ["I feel worthless", "You are absolutely valuable and worthy. These feelings can be really difficult. Would you like to talk more about what's making you feel this way?"],
-    ["I'm tired all the time", "Constant fatigue can be difficult to deal with. Has this been going on for a while?"]
+    ["What are you?", "I'm an AI companion focused on emotional support. I'm here to listen and help you process your feelings."],
+    ["How does this work?", "You can share your thoughts and feelings with me, and I'll respond with supportive messages. Everything you share is private."]
 ]
 
-# Train the bot with both conversation sets
+emotional_support_pairs = [
+    # Sadness responses
+    ["I'm feeling sad", "I'm really sorry you're feeling this way. Sometimes talking about your feelings can help. What's on your mind?"],
+    ["I'm sad", "I'm sorry to hear that. Would you like to talk about what's making you feel sad?"],
+    ["I feel sad", "It's okay to feel sad sometimes. Would you like to share what's contributing to these feelings?"],
+    ["I'm depressed", "I'm sorry to hear you're feeling depressed. Have you been able to talk to anyone about how you're feeling?"],
+    ["I feel depressed", "Depression can be really difficult to deal with. Would it help to talk about what you're experiencing?"],
+    ["I've been feeling down lately", "I'm sorry to hear that. Sometimes talking about what's bringing you down can help. Would you like to share more?"],
+    
+    # Anxiety responses
+    ["I'm anxious", "It sounds like you're experiencing anxiety. Would you like some tips on how to relax or talk about what's causing it?"],
+    ["I feel anxious", "Anxiety can be really challenging. Can you tell me more about what's making you feel anxious?"],
+    ["I have anxiety", "Many people experience anxiety. Would you like to talk about specific situations that trigger your anxiety?"],
+    ["I'm worried", "It's natural to worry sometimes. Could you share what's on your mind?"],
+    ["I can't stop worrying", "Persistent worry can be exhausting. Would it help to talk through some of your concerns?"],
+    ["I'm panicking", "Try to take a few deep breaths. I'm here with you. Would it help to try a quick grounding exercise together?"],
+    
+    # Loneliness responses
+    ["I feel alone", "It can be hard feeling isolated. Remember, I'm here to listen. Do you want to share more about your situation?"],
+    ["I'm lonely", "Loneliness can be really difficult. Would you like to talk about ways to connect with others or what's making you feel this way?"],
+    ["I have no one to talk to", "I'm here to listen anytime. Would it help to talk about what's going on in your life right now?"],
+    ["I feel isolated", "Feeling isolated can be really challenging. Have there been any changes in your life recently that might be contributing to this?"],
+    
+    # Overwhelm responses
+    ["I don't know what to do", "When things seem overwhelming, taking small steps can help. Tell me what is troubling you?"],
+    ["I'm stuck", "Feeling stuck can be frustrating. Would it help to talk about what areas of your life feel stagnant?"],
+    ["I'm overwhelmed", "I'm sorry you're feeling overwhelmed. Sometimes breaking things down can help. What's the most pressing issue right now?"],
+    ["I am overwhelmed", "It's understandable to feel that way sometimes. Would it help to talk about one thing at a time?"],
+    ["Everything is too much", "When everything feels like too much, focusing on just the next step can help. What's one small thing you could address first?"],
+    ["I can't handle everything", "That sounds really tough. Would it help to talk about each challenge one by one?"],
+    
+    # Self-worth concerns
+    ["I feel worthless", "You are absolutely valuable and worthy. These feelings can be really difficult. Would you like to talk more about what's making you feel this way?"],
+    ["I'm not good enough", "I believe you have worth and value. What's making you feel like you're not good enough?"],
+    ["I hate myself", "I'm sorry you're feeling this way about yourself. These feelings can be really painful. Would it help to talk about where these thoughts might be coming from?"],
+    ["I feel like a failure", "Making mistakes doesn't make you a failure. We all face setbacks. Would you like to talk about what's happened?"],
+    
+    # Stress responses
+    ["I'm stressed", "Stress can be really challenging. Can you tell me more about what's causing your stress?"],
+    ["I feel stressed", "I understand how difficult stress can be. Would it help to talk about what's contributing to your stress right now?"],
+    ["I'm under a lot of pressure", "Being under pressure can be really tough. Would you like to talk about what expectations you're facing?"],
+    ["I can't relax", "Finding it hard to relax can be frustrating. Would you like to try a brief relaxation exercise together?"],
+    
+    # Fatigue responses
+    ["I'm tired all the time", "Constant fatigue can be difficult to deal with. Has this been going on for a while?"],
+    ["I have no energy", "Lack of energy can make everything harder. Have you noticed any patterns with when you feel most drained?"],
+    ["I'm exhausted", "Being exhausted can affect everything. Would it help to talk about what might be draining your energy?"],
+    
+    # Work/school related
+    ["I hate my job", "It can be really difficult when you're unhappy at work. What aspects of your job are most challenging?"],
+    ["I hate school", "School can be really challenging sometimes. What parts of school are most difficult for you?"],
+    ["I'm failing at work", "Work challenges can feel overwhelming. Would it help to talk about specific situations that are difficult?"],
+    ["Work is too much", "Work pressures can be intense. Would you like to discuss strategies for managing your workload?"],
+    ["Let's talk about work", "Okay, let's talk about work. What's been going on?"],
+    ["Let's talk about school", "I'd be happy to discuss school with you. What's been happening there?"]
+]
+
+specific_situation_pairs = [
+    ["It's just everything. Work, family, and school. I can't handle it all.", "That sounds really tough. Would it help to talk about each one of them one by one?"],
+    ["Maybe... I can start with work.", "Okay, let's talk about work. What's been going on?"],
+    ["I feel like I'm stuck in a rut.", "It can be frustrating to feel stuck. What do you think is keeping you there?"],
+    ["I'm in a rut", "It can be frustrating to feel stuck. What do you think is keeping you there?"],
+    ["I don't have motivation for anything.", "That sounds tough. Have you had time to relax and recharge?"],
+    ["I lack motivation", "Lack of motivation can be frustrating. Has anything helped you feel motivated in the past?"],
+    ["Not really. I've been pushing myself too hard.", "Pushing yourself can be exhausting. Maybe focusing on small tasks could help. What do you think?"],
+    ["I push myself too hard", "Being hard on yourself can be exhausting. Would it help to talk about setting some boundaries?"],
+    ["I'm really anxious about the future.", "It's normal to feel anxious about the future. What exactly are you worried about?"],
+    ["The future worries me", "Uncertainty about the future can be stressful. Is there something specific about the future that concerns you most?"],
+    ["I don't know what I'll do after I graduate.", "It's okay to be uncertain. Do you have any ideas of what you might want to do?"],
+    ["I'm uncertain about my career", "Career uncertainty is very common. Would it help to explore what aspects of work are most meaningful to you?"],
+    ["I'm not sure. I feel like I should know by now.", "That's okay. You don't have to have everything figured out. Taking small steps and being kind to yourself can help."],
+    ["I should know what to do by now", "Many people feel that way, but life paths aren't always clear. Would it help to talk about some options you're considering?"]
+]
+
+assistance_pairs = [
+    ["Can you recommend a therapist?", "I can help with that. It's important to find a therapist who's a good fit for you. Would you like some tips on how to search for one in your area?"],
+    ["I need a therapist", "Looking for professional support is a great step. Would you like some guidance on how to find a therapist who specializes in what you're experiencing?"],
+    ["How do I find help?", "Finding the right help is important. Would you like some suggestions for resources or types of support that might be helpful for your situation?"],
+    ["I need help", "I'm here to listen. Could you tell me more about what kind of help you're looking for?"],
+    ["Can you show me a video?", "I can suggest some helpful videos. What topic would you like to learn more about?"],
+    ["I want to see a video", "I'd be happy to suggest some video resources. What subject would be most helpful for you right now?"],
+    ["Do you have any resources?", "I can certainly suggest some resources. What specific type of support are you looking for?"],
+    ["What should I do?", "That depends on your situation. Could you tell me more about what you're experiencing so I can offer more specific support?"],
+    ["How can I feel better?", "There are many approaches to improving how you feel. Would you like to talk about some coping strategies that might work for your situation?"]
+]
+
+conversation_closing_pairs = [
+    ["Goodbye", "Take care of yourself. I'm always here when you need to talk."],
+    ["Bye", "Take care. Remember you can come back anytime you need support."],
+    ["Thank you", "You're welcome. I'm glad I could help."],
+    ["Thanks", "You're welcome. Remember I'm here whenever you need to talk."],
+    ["This was helpful", "I'm glad this conversation was helpful. Feel free to come back anytime."],
+    ["I feel better", "I'm really glad to hear that. Remember, I'm here anytime you want to talk."],
+    ["I need to go", "Of course. Take care, and remember I'm here whenever you need support."]
+]
+
+# Coping strategies and exercises
+coping_strategies_pairs = [
+    ["How can I manage anxiety?", "There are several techniques that can help with anxiety. Deep breathing, progressive muscle relaxation, and mindfulness can be effective. Would you like to try a brief exercise?"],
+    ["How can I relax?", "Relaxation can come in many forms. Some find deep breathing helpful, others prefer physical movement or creative activities. What types of activities usually help you unwind?"],
+    ["I need to calm down", "Let's try a quick calming exercise. Take a slow deep breath in through your nose for 4 counts, hold for 1, and exhale through your mouth for 6 counts. Would you like to try this together?"],
+    ["Give me a breathing exercise", "Here's a simple breathing exercise: Breathe in slowly through your nose for 4 counts, hold for 1 count, then exhale slowly through your mouth for 6 counts. Repeat this 5 times. Would you like to try it?"],
+    ["How do I practice mindfulness?", "Mindfulness is about being present in the moment. A simple way to start is to focus on your breathing and notice any sensations in your body without judgment. Would you like a quick mindfulness exercise?"],
+    ["I can't sleep", "Trouble sleeping can be frustrating. Some find that establishing a regular bedtime routine, limiting screen time before bed, and relaxation techniques can help. Would you like to discuss some sleep strategies?"]
+]
+
+# Train the bot with all conversation categories
 trainer = ListTrainer(bot)
-trainer.train(conversation_pairs)
-trainer.train(additional_pairs)
+
+# Train with each category
+print("Starting training with introduction pairs...")
+trainer.train(introduction_pairs)
+print("Starting training with emotional support pairs...")
+trainer.train(emotional_support_pairs)
+print("Starting training with specific situation pairs...")
+trainer.train(specific_situation_pairs)
+print("Starting training with assistance pairs...")
+trainer.train(assistance_pairs)
+print("Starting training with conversation closing pairs...")
+trainer.train(conversation_closing_pairs)
+print("Starting training with coping strategies pairs...")
+trainer.train(coping_strategies_pairs)
+
+# Custom training data with more nuanced responses
+# These are more complex exchanges that help the bot understand context
+complex_conversations = [
+    [
+        "I keep having panic attacks",
+        "That sounds really difficult. Panic attacks can be frightening and overwhelming. Have you found anything that helps when you're experiencing one?"
+    ],
+    [
+        "Nothing helps when I panic",
+        "I understand how distressing that can be. Some people find that focusing on their breathing or using grounding techniques like the 5-4-3-2-1 method can help during a panic attack. Would you like me to explain how these techniques work?"
+    ],
+    [
+        "What's the 5-4-3-2-1 method?",
+        "The 5-4-3-2-1 method is a grounding technique that uses your five senses to help you focus on the present. Name 5 things you can see, 4 things you can touch, 3 things you can hear, 2 things you can smell, and 1 thing you can taste. This can help interrupt the cycle of panic."
+    ],
+    [
+        "I'm having trouble with my relationships",
+        "Relationship challenges can be really difficult. Would you like to talk about a specific relationship or pattern you've noticed?"
+    ],
+    [
+        "I argue with my partner all the time",
+        "Frequent arguments can be stressful. Have you noticed any patterns in what triggers these arguments?"
+    ],
+    [
+        "We always fight about the same things",
+        "Recurring conflicts can be frustrating. Sometimes writing down your thoughts before discussing difficult topics can help. Would you like to explore some communication strategies that might help?"
+    ]
+]
+
+# Train with complex conversations
+print("Starting training with complex conversations...")
+for conversation in complex_conversations:
+    trainer.train(conversation)
 
 # After training, set read_only to True if you don't want the bot to learn from new conversations
 bot.read_only = True
 
-print("✅ HearMe Chatbot training completed!")
+# Function to get current responses for a test input
+def test_bot_response(input_text):
+    response = bot.get_response(input_text)
+    return response
+
+# Test a few common inputs to verify training
+test_inputs = [
+    "Hello",
+    "I'm feeling sad",
+    "I'm anxious",
+    "I need a therapist",
+    "How can I manage stress?"
+]
+
+print("\nTesting responses:")
+for test_input in test_inputs:
+    response = test_bot_response(test_input)
+    print(f"Input: '{test_input}' → Response: '{response}'")
+
+print(f"\n✅ HearMe Chatbot training completed on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}!")
+print("Bot is ready to provide emotional support. Remember, this is not a replacement for professional mental health care.")

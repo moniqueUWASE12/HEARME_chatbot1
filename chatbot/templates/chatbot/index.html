@@ -208,6 +208,49 @@
                 dropdown.classList.remove('active');
             }
         });
+
+        function handleBotResponse(responseText) {
+    const chatBox = document.querySelector('.chat-box'); // Adjust this selector as needed
+
+    // Create message bubble
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('bot-message');
+
+    // Default styles
+    let bgColor = '#f0f0f0';
+    let emoji = '😐';
+
+    // Extract sentiment from the response
+    const sentimentMatch = responseText.match(/Sentiment Analysis:\s*(\w+)/);
+    if (sentimentMatch) {
+        const sentiment = sentimentMatch[1];
+        if (sentiment === 'Positive') {
+            bgColor = '#d4edda'; // light green
+            emoji = '😊';
+        } else if (sentiment === 'Negative') {
+            bgColor = '#f8d7da'; // light red
+            emoji = '😟';
+        } else if (sentiment === 'Neutral') {
+            bgColor = '#fff3cd'; // light yellow
+            emoji = '😐';
+        }
+    }
+
+    // Set the message content with emoji
+    messageDiv.innerHTML = `${emoji} ${responseText.replace(/\n/g, "<br>")}`;
+    messageDiv.style.backgroundColor = bgColor;
+    messageDiv.style.padding = "10px";
+    messageDiv.style.borderRadius = "10px";
+    messageDiv.style.margin = "10px 0";
+    messageDiv.style.maxWidth = "75%";
+
+    chatBox.appendChild(messageDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+messageDiv.classList.add(sentiment.toLowerCase());
+
+
     </script>
     
 </body>
