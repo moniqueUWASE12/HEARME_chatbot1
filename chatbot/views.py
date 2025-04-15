@@ -17,6 +17,7 @@ from .models import UserProfile, Conversation
 from chatterbot.comparisons import LevenshteinDistance
 from chatterbot.response_selection import get_most_frequent_response
 from textblob import TextBlob
+from chatterbot.trainers import ListTrainer, ChatterBotCorpusTrainer
 
 
 
@@ -28,24 +29,58 @@ bot = ChatBot(
         {
             'import_path': 'chatterbot.logic.BestMatch',
             'default_response': "I'm here to listen. Could you tell me more about what you're experiencing?",
-            'maximum_similarity_threshold': 0.75,  # Slightly lowered to catch more variations
+            'maximum_similarity_threshold': 0.95,  # Slightly lowered to catch more variations
             'statement_comparison_function': LevenshteinDistance,
             'response_selection_method': get_most_frequent_response
         },
-        {
-            'import_path': 'chatterbot.logic.SpecificResponseAdapter',
-            'input_text': 'help me',
-            'output_text': "I'm here to help. What's troubling you today?"
-        }
     ],
-
-    preprocessors=[
-        'chatterbot.preprocessors.clean_whitespace',
-        'chatterbot.preprocessors.convert_to_ascii',
-        'chatterbot.preprocessors.unescape_html'
-    ]
     
     )
+def train_chatbot():
+    print("Training the chatbot...")
+    # Train with custom data
+list_trainer = ListTrainer(bot)
+list_to_train = [ 
+    "Hello",
+    "Hi, I'm HearMe. How are you feeling today?",
+    "Hi",
+    "Hello! I'm HearMe. How are you feeling today?",
+    "Hey", 
+    "Hi there! How are you doing today?",
+    "Good morning",
+    "Good morning! How are you feeling today?",
+    "Good afternoon", 
+    "Good afternoon! How are you feeling today?",
+    "Good evening", 
+    "Good evening! How are you feeling today?",
+    "How are you?", 
+    "I'm here to listen and help you. How are you feeling?",
+    "Who are you?", 
+    "I'm HearMe, a supportive chat companion designed to listen and help with emotional concerns.",
+    "What can you do?", 
+    "I can listen to how you're feeling, offer support, and help you explore your emotions. What's on your mind today?",
+    "What are you?", 
+    "I'm an AI companion focused on emotional support. I'm here to listen and help you process your feelings.",
+    "How does this work?", 
+    "You can share your thoughts and feelings with me, and I'll respond with supportive messages. Everything you share is private.",
+    "Amakuru?",
+    "Ni meza, wowe urakomeye?"
+    "Murakoze",
+    "Nawe urakoze, Nishimiye kugufasha!",
+    "ndumva ntameze neza",
+    " mbwira ndakumva ndahari kugirango mbafashe",
+    "umukunzi yanyanze ndumva nshaka kwiyahura",
+    "Ndagukunda kandi ndakumva, ariko ndasaba ko waganira n'umuntu ubifitiye ubushobozi. Hari abajyanama n'abaganga bashobora kugufasha.",
+
+   
+]
+list_trainer.train(list_to_train)
+corpus_trainer = ChatterBotCorpusTrainer(bot)
+corpus_trainer.train('chatterbot.corpus.english')
+print("Chatbot training completed!")
+
+##chatterBotCorpusTrainer= ChatterBotCorpusTrainer(bot)
+#chatterBotCorpusTrainer.train('chatterbot.corpus.english')
 
 def welcome_view(request):
     return render(request, 'chatbot/welcome.html')

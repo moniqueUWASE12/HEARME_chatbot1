@@ -1,5 +1,5 @@
 from chatterbot import ChatBot
-from chatterbot.trainers import ListTrainer
+from chatterbot.trainers import ListTrainer, ChatterBotCorpusTrainer
 from chatterbot.comparisons import LevenshteinDistance
 from chatterbot.response_selection import get_most_frequent_response
 from datetime import datetime
@@ -16,7 +16,7 @@ bot = ChatBot(
         {
             'import_path': 'chatterbot.logic.BestMatch',
             'default_response': "I'm here to listen. Could you tell me more about what you're experiencing?",
-            'maximum_similarity_threshold': 0.75,  # Slightly lowered to catch more variations
+            'maximum_similarity_threshold': 0.95,  # Slightly lowered to catch more variations
             'statement_comparison_function': LevenshteinDistance,
             'response_selection_method': get_most_frequent_response
         },
@@ -158,21 +158,21 @@ coping_strategies_pairs = [
 ]
 
 # Train the bot with all conversation categories
-trainer = ListTrainer(bot)
+#trainer = ListTrainer(bot)
 
 # Train with each category
-print("Starting training with introduction pairs...")
-trainer.train(introduction_pairs)
-print("Starting training with emotional support pairs...")
-trainer.train(emotional_support_pairs)
-print("Starting training with specific situation pairs...")
-trainer.train(specific_situation_pairs)
-print("Starting training with assistance pairs...")
-trainer.train(assistance_pairs)
-print("Starting training with conversation closing pairs...")
-trainer.train(conversation_closing_pairs)
-print("Starting training with coping strategies pairs...")
-trainer.train(coping_strategies_pairs)
+#print("Starting training with introduction pairs...")
+#trainer.train(introduction_pairs)
+#print("Starting training with emotional support pairs...")
+#trainer.train(emotional_support_pairs)
+#print("Starting training with specific situation pairs...")
+#trainer.train(specific_situation_pairs)
+#print("Starting training with assistance pairs...")#
+#trainer.train(assistance_pairs)
+#print("Starting training with conversation closing pairs...")
+#trainer.train(conversation_closing_pairs)
+#print("Starting training with coping strategies pairs...")
+#trainer.train(coping_strategies_pairs)
 
 # Custom training data with more nuanced responses
 # These are more complex exchanges that help the bot understand context
@@ -202,11 +202,12 @@ complex_conversations = [
         "Recurring conflicts can be frustrating. Sometimes writing down your thoughts before discussing difficult topics can help. Would you like to explore some communication strategies that might help?"
     ]
 ]
-
+chatterBotCorpusTrainer= ChatterBotCorpusTrainer(bot)
+chatterBotCorpusTrainer.train('chatterbot.corpus.english')
 # Train with complex conversations
 print("Starting training with complex conversations...")
 for conversation in complex_conversations:
-    trainer.train(conversation)
+    chatterBotCorpusTrainer.train(conversation)
 
 # After training, set read_only to True if you don't want the bot to learn from new conversations
 bot.read_only = True

@@ -316,8 +316,8 @@ body {
 /* User Message */
 .user-message {
     align-self: flex-end;
-    background: #3498db;
-    color: white;
+    background: rgb(235, 232, 232);
+    color: black;
     border-bottom-right-radius: 4px;
     box-shadow: 0 2px 10px rgba(52, 152, 219, 0.2);
 }
@@ -427,4 +427,31 @@ body {
 }
 .bot-message.negative {
     background-color: #f8d7da;
+}
+
+.voice-toggle {
+    margin-left: 10px;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    background-color: #f1f1f1;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Add spacing between elements */
+}
+
+.language-controls select,
+.language-controls button {
+    margin-left: 5px; /* Adjust spacing if needed */
 }
