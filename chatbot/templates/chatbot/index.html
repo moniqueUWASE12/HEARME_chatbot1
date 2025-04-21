@@ -14,8 +14,46 @@
                 <i>🗨️</i> New Chat
             </div>
             <h3>Recent Conversations</h3>
-            <div id="recentConversations"></div>
+            <div id="recentConversations">
+                <!-- Recent conversations will be dynamically loaded here -->
+            <!-- Today’s Sessions -->
+            {% if sessions_today %}
+            <div class="conversation-group">
+                <h4>Today</h4>
+                {% for session in sessions_today %}
+                    <div class="recent-chat" onclick="loadSession('{{ session.id }}')">
+                        {{ session.title }}
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        
+            <!-- Yesterday’s Sessions -->
+            {% if sessions_yesterday %}
+            <div class="conversation-group">
+                <h4>Yesterday</h4>
+                {% for session in sessions_yesterday %}
+                    <div class="recent-chat" onclick="loadSession('{{ session.id }}')">
+                        {{ session.title }}
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        
+            <!-- Last 7 Days -->
+            {% if sessions_last_week %}
+            <div class="conversation-group">
+                <h4>Previous 7 Days</h4>
+                {% for session in sessions_last_week %}
+                    <div class="recent-chat" onclick="loadSession('{{ session.id }}')">
+                        {{ session.title }}
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            </div>
         </div>
+        
 
         <div class="chat-container">
             <div class="chat-header">
@@ -104,91 +142,133 @@
         }
 
         function addToRecent(userInput) {
-            if (!isConversationAdded) {
-                const chatItem = document.createElement("div");
-                chatItem.classList.add("recent-chat");
-                chatItem.innerText = userInput;
-                chatItem.onclick = () => loadConversation(conversations);
-                recentConversations.prepend(chatItem);
-                isConversationAdded = true;
-            }
-        }
-
-        function sendMessage() {
-            const userInput = document.getElementById("userInput").value;
-            if (userInput.trim() === "") return;
-
-            const initialMessage = document.querySelector(".start-ai-mess");
-            if (initialMessage) initialMessage.remove();
-
-            const userMsg = document.createElement("div");
-            userMsg.classList.add("message", "user-message");
-            userMsg.innerText = userInput;
-            chatBox.appendChild(userMsg);
-
-            conversations.push({ type: "user", text: userInput });
-            document.getElementById("userInput").value = "";
-
-            const typingIndicator = document.createElement("div");
-            typingIndicator.classList.add("message", "ai-message");
-            typingIndicator.innerText = "Typing...";
-            chatBox.appendChild(typingIndicator);
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-            setTimeout(() => {
-                fetch('/chatbot/response/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': getCsrfToken(),
-                    },
-                    body: 'user_input=' + encodeURIComponent(userInput),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    chatBox.removeChild(typingIndicator);
-
-                    const aiMsg = document.createElement("div");
-                    aiMsg.classList.add("message", "ai-message");
-
-                    if (data.ai_response.includes("Watch here:")) {
-                        const parts = data.ai_response.split("Watch here:");
-                        aiMsg.innerHTML = parts[0] + `<br><iframe width="300" height="200" src="${parts[1].trim()}" frameborder="0" allowfullscreen></iframe>`;
-                    } else {
-                        aiMsg.innerText = data.ai_response;
-                    }
-
-                    chatBox.appendChild(aiMsg);
-                    chatBox.scrollTop = chatBox.scrollHeight;
-
-                    // Speak the response
-                    if (!isMuted) {
-                        const utterance = new SpeechSynthesisUtterance(data.ai_response);
-                        utterance.lang = selectedLanguage === 'kinyarwanda' ? 'rw-RW' : 'en-US';
-                        const voices = window.speechSynthesis.getVoices();
-                        const matchingVoice = voices.find(v => v.lang === utterance.lang);
-                        if (matchingVoice) utterance.voice = matchingVoice;
-                        window.speechSynthesis.speak(utterance);
-                    }
-
-                    conversations.push({ type: "ai", text: data.ai_response });
-                    addToRecent(userInput);
-                })
-                .catch(error => {
-                    chatBox.removeChild(typingIndicator);
-                    const errorMsg = document.createElement("div");
-                    errorMsg.classList.add("message", "ai-message");
-                    errorMsg.innerText = "Sorry, something went wrong.";
-                    chatBox.appendChild(errorMsg);
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                });
-            }, 500);
-        }
-        document.getElementById("userInput").addEventListener("keypress", function(event) {
-    if (event.key === "Enter") {
-        sendMessage();
+    if (!conversations.some(c => c.text === userInput && c.type === "user")) {
+        const chatItem = document.createElement("div");
+        chatItem.classList.add("recent-chat");
+        chatItem.innerText = userInput;
+        chatItem.onclick = () => loadConversation(conversations);
+        document.getElementById("recentConversations").prepend(chatItem);
     }
-});
+}
+
+function showLoader() {
+    const loaderContainer = document.createElement("div");
+    loaderContainer.classList.add("loader1");
+
+    const loader = document.createElement("div");
+    loader.className = "loader";
+    loaderContainer.appendChild(loader);
+
+    const loaderText = document.createElement("div");
+    loaderText.className = "loader-text";
+    loaderText.innerText = "Thinking...";
+    loaderContainer.appendChild(loaderText);
+
+    chatBox.appendChild(loaderContainer);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    return loaderContainer; // Return the loader container so it can be removed later
+}
+
+function fetchWithTimeout(url, options, timeout = 10000) {
+    return Promise.race([
+        fetch(url, options),
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Request timed out")), timeout)
+        ),
+    ]);
+}
+
+function sendMessage() {
+    const userInput = document.getElementById("userInput").value;
+    if (userInput.trim() === "") return;
+
+    // Remove the initial message if it's still there
+    const initialMessage = document.querySelector(".start-ai-mess");
+    if (initialMessage) initialMessage.remove();
+
+    // Create and display the user's message
+    const userMsg = document.createElement("div");
+    userMsg.classList.add("message", "user-message");
+    userMsg.innerText = userInput;
+    chatBox.appendChild(userMsg);
+
+    conversations.push({ type: "user", text: userInput });
+    document.getElementById("userInput").value = "";
+
+    // Show the loader
+    const loaderContainer = showLoader();
+
+    fetchWithTimeout('/chatbot/response/', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': getCsrfToken(),
+    },
+    body: 'user_input=' + encodeURIComponent(userInput),
+})
+    .then(response => response.json())
+    .then(data => {
+        // Handle response
+    })
+    .catch(error => {
+        // Handle timeout or other errors
+    });
+
+    // Fetch AI response
+    fetch('/chatbot/response/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCsrfToken(),
+        },
+        body: 'user_input=' + encodeURIComponent(userInput),
+    })
+        .then(response => response.json())
+        .then(data => {
+            // Remove the loader
+            if (chatBox.contains(loaderContainer)) {
+                chatBox.removeChild(loaderContainer);
+            }
+
+            const aiMsg = document.createElement("div");
+            aiMsg.classList.add("message", "ai-message");
+
+            if (data.ai_response.includes("Watch here:")) {
+                const parts = data.ai_response.split("Watch here:");
+                aiMsg.innerHTML = parts[0] + `<br><iframe width="300" height="200" src="${parts[1].trim()}" frameborder="0" allowfullscreen></iframe>`;
+            } else {
+                aiMsg.innerText = data.ai_response;
+            }
+
+            chatBox.appendChild(aiMsg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            conversations.push({ type: "ai", text: data.ai_response });
+
+            // If not muted, speak the AI response
+            if (!isMuted) {
+                const utterance = new SpeechSynthesisUtterance(data.ai_response);
+                utterance.lang = selectedLanguage === 'kinyarwanda' ? 'rw-RW' : 'en-US';
+                const voices = window.speechSynthesis.getVoices();
+                const matchingVoice = voices.find(v => v.lang === utterance.lang);
+                if (matchingVoice) {
+                    utterance.voice = matchingVoice;
+                }
+                window.speechSynthesis.speak(utterance);
+            }
+        })
+        .catch(error => {
+            // Remove the loader
+            if (chatBox.contains(loaderContainer)) {
+                chatBox.removeChild(loaderContainer);
+            }
+            const errorMsg = document.createElement("div");
+            errorMsg.classList.add("message", "ai-message");
+            errorMsg.innerText = "Sorry, something went wrong.";
+            chatBox.appendChild(errorMsg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+}
 
 
         function loadConversation(conversation) {
@@ -207,6 +287,14 @@
             isConversationAdded = false;
             conversations.length = 0;
         }
+        document.getElementById("userInput").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        sendMessage();
+    }
+});
+ 
+
 
         function toggleDropdown() {
             const dropdown = document.querySelector('.profile-dropdown');
@@ -222,6 +310,55 @@
 
         // Preload voices (especially for rw-RW)
         window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+
+    
+    
+        function loadSession(sessionId) {
+    // Fetch the session conversation details using a GET request.
+       fetch(`/chatbot/load_session/?session_id=${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            chatBox.innerHTML = "";
+            data.messages.forEach(function(msg) {
+                const messageDiv = document.createElement("div");
+                messageDiv.classList.add("message", msg.type === "user" ? "user-message" : "ai-message");
+                messageDiv.innerText = msg.text;
+                chatBox.appendChild(messageDiv);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+        })
+        .catch(error => {
+            console.error("Error loading session:", error);
+        });
+}
+
+function loadRecentConversations() {
+    fetch('/chatbot/recent_conversations/')
+        .then(response => response.json())
+        .then(data => {
+            const recentConversationsContainer = document.getElementById("recentConversations");
+            recentConversationsContainer.innerHTML = ""; // Clear existing items
+
+            if (data.recent_conversations) {
+                data.recent_conversations.forEach(conversation => {
+                    const chatItem = document.createElement("div");
+                    chatItem.classList.add("recent-chat");
+                    chatItem.innerText = conversation.title;
+                    chatItem.onclick = () => loadSession(conversation.id); // Load the session when clicked
+                    recentConversationsContainer.appendChild(chatItem);
+                });
+            } else {
+                recentConversationsContainer.innerHTML = "<p>No recent conversations found.</p>";
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching recent conversations:", error);
+        });
+}
+
+// Call the function to load recent conversations when the page loads
+window.onload = loadRecentConversations;
+
     </script>
 </body>
 </html>

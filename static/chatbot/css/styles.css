@@ -455,3 +455,128 @@ body {
 .language-controls button {
     margin-left: 5px; /* Adjust spacing if needed */
 }
+
+/* Language controls container */
+.language-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 15px;
+}
+
+/* Language select dropdown */
+#languageSelect {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 5px center;
+    padding-right: 30px;
+}
+
+#languageSelect:hover, #languageSelect:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* Mute/unmute button */
+#muteBtn {
+    background-color: rgb(3, 42, 74);
+    color: rgb(65, 243, 204);
+    border: none;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#muteBtn:hover {
+    background-color: #2980b9;
+    transform: scale(1.05);
+}
+
+#muteBtn:active {
+    transform: scale(0.95);
+}
+
+/* Media query for smaller screens */
+@media (max-width: 576px) {
+    .language-controls {
+        margin-right: 8px;
+        gap: 5px;
+    }
+    
+    #languageSelect {
+        font-size: 12px;
+        padding: 4px 8px;
+        padding-right: 25px;
+        background-position: right 2px center;
+    }
+    
+    #muteBtn {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+    }
+}
+
+/* Loader container */
+.loader-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+/* Spinner */
+.loader {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+
+/* Loader text */
+.loader-text {
+    margin-left: 10px;
+    font-size: 14px;
+    color: #555;
+}
+
+/* Spinner animation */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.loader1{
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    padding: 10px;
+    margin: 8px 0;
+    max-width: 80%;
+    transition: background-color 0.3s ease;
+}
+  

@@ -11,6 +11,8 @@ urlpatterns = [
     path('signup/', views.signup_view, name='signup'),
     path('logout/', views.custom_logout_view, name='logout'),
     #path('chatbot/get_response/', views.get_response, name='get_response'),
+    path('recent_conversations/', views.get_recent_conversations, name='recent_conversations'),
+    path('load_session/', views.load_session_view, name='load_session'),
    
     
 

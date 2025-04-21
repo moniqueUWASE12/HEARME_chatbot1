@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)  # Link to Django's built-in User model
@@ -11,14 +12,27 @@ class UserProfile(models.Model):
     def __str__(self):
         return self.user.username
 
+
+class ConversationSession(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    title = models.CharField(max_length=255, help_text="AI-generated title summary of the conversation")
+    start_time = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.title} ({self.start_time.strftime('%Y-%m-%d')})"
+
 class Conversation(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)  # Link to the user
+    # Link each conversation message to its session:
+    user = models.ForeignKey(User, on_delete=models.CASCADE) 
+    session = models.ForeignKey(ConversationSession, on_delete=models.CASCADE, null=True, blank=True)
     message = models.TextField()  # User's message
     response = models.TextField()  # Chatbot's response
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Conversation with {self.user.username} at {self.timestamp}"
+        return f"Conversation from {self.timestamp.strftime('%Y-%m-%d %H:%M')} (Session: {self.session.title if self.session else 'N/A'})"
+
+# Your other models (Therapist, Video, etc.) remain unchanged.
 
 class Therapist(models.Model):
     name = models.CharField(max_length=100)

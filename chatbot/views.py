@@ -18,69 +18,27 @@ from chatterbot.comparisons import LevenshteinDistance
 from chatterbot.response_selection import get_most_frequent_response
 from textblob import TextBlob
 from chatterbot.trainers import ListTrainer, ChatterBotCorpusTrainer
+from django.utils import timezone
+from datetime import timedelta
+# Import your new model
+from .models import ConversationSession
 
 
-
-# Initialize the ChatBot
+# Initialize chatbot (no training here!)
 bot = ChatBot(
     'HearMe',
-    read_only=False,
+    read_only=False,  # Optional: prevent it from learning from user input
     logic_adapters=[
-        {
-            'import_path': 'chatterbot.logic.BestMatch',
-            'default_response': "I'm here to listen. Could you tell me more about what you're experiencing?",
-            'maximum_similarity_threshold': 0.95,  # Slightly lowered to catch more variations
-            'statement_comparison_function': LevenshteinDistance,
-            'response_selection_method': get_most_frequent_response
-        },
-    ],
-    
-    )
-def train_chatbot():
-    print("Training the chatbot...")
-    # Train with custom data
-list_trainer = ListTrainer(bot)
-list_to_train = [ 
-    "Hello",
-    "Hi, I'm HearMe. How are you feeling today?",
-    "Hi",
-    "Hello! I'm HearMe. How are you feeling today?",
-    "Hey", 
-    "Hi there! How are you doing today?",
-    "Good morning",
-    "Good morning! How are you feeling today?",
-    "Good afternoon", 
-    "Good afternoon! How are you feeling today?",
-    "Good evening", 
-    "Good evening! How are you feeling today?",
-    "How are you?", 
-    "I'm here to listen and help you. How are you feeling?",
-    "Who are you?", 
-    "I'm HearMe, a supportive chat companion designed to listen and help with emotional concerns.",
-    "What can you do?", 
-    "I can listen to how you're feeling, offer support, and help you explore your emotions. What's on your mind today?",
-    "What are you?", 
-    "I'm an AI companion focused on emotional support. I'm here to listen and help you process your feelings.",
-    "How does this work?", 
-    "You can share your thoughts and feelings with me, and I'll respond with supportive messages. Everything you share is private.",
-    "Amakuru?",
-    "Ni meza, wowe urakomeye?"
-    "Murakoze",
-    "Nawe urakoze, Nishimiye kugufasha!",
-    "ndumva ntameze neza",
-    " mbwira ndakumva ndahari kugirango mbafashe",
-    "umukunzi yanyanze ndumva nshaka kwiyahura",
-    "Ndagukunda kandi ndakumva, ariko ndasaba ko waganira n'umuntu ubifitiye ubushobozi. Hari abajyanama n'abaganga bashobora kugufasha.",
+                {
+                'import_path': 'chatterbot.logic.BestMatch',
+                'default_response': "I'm here to listen. Could you tell me more about what you're experiencing?",
+                'maximum_similarity_threshold': 0.95,  # Slightly lowered to catch more variations
+                'statement_comparison_function': LevenshteinDistance,
+                'response_selection_method': get_most_frequent_response
+                }
+                ]
+)
 
-   
-]
-list_trainer.train(list_to_train)
-corpus_trainer = ChatterBotCorpusTrainer(bot)
-corpus_trainer.train('chatterbot.corpus.english')
-print("Chatbot training completed!")
-
-##chatterBotCorpusTrainer= ChatterBotCorpusTrainer(bot)
-#chatterBotCorpusTrainer.train('chatterbot.corpus.english')
 
 def welcome_view(request):
     return render(request, 'chatbot/welcome.html')
@@ -140,26 +98,47 @@ def signup_view(request):
 
 @login_required
 def chatbot_view(request):
-    user_conversations = Conversation.objects.filter(user=request.user).order_by('timestamp')
-    
-    # Group conversations into sessions (optional enhancement)
+    today = timezone.now().date()
+    yesterday = today - timedelta(days=1)
+    seven_days_ago = today - timedelta(days=7)
+
+    conversations_today = Conversation.objects.filter(user=request.user, timestamp__date=today)
+    conversations_yesterday = Conversation.objects.filter(user=request.user, timestamp__date=yesterday)
+    conversations_last_week = Conversation.objects.filter(
+        user=request.user,
+        timestamp__date__gte=seven_days_ago,
+        timestamp__date__lt=yesterday
+    )
+
     chat_data = [
         {'message': conv.message, 'response': conv.response, 'timestamp': conv.timestamp.strftime('%Y-%m-%d %H:%M:%S')}
-        for conv in user_conversations
+        for conv in conversations_today  # You can switch to show all if needed
     ]
+
     return render(request, 'chatbot/index.html', {
         'username': request.user.username,
-        'chat_data': chat_data
+        'chat_data': chat_data,
+        'conversations_today_count': conversations_today.count(),
+        'conversations_yesterday_count': conversations_yesterday.count(),
+        'conversations_last_week_count': conversations_last_week.count(),
     })
-
-    
+def create_session_title(user_input):
+    """
+    Generates a title from the user's first message.
+    You can use more advanced methods (like NLP summarization) here.
+    For now, we simply return the first 40 characters.
+    """
+    title = user_input.strip()
+    if len(title) > 40:
+        title = title[:40] + "..."
+    return title or "New Conversation"    
 
 
 def chatbot_ai_response(request):
     user_input = request.POST.get('user_input', '')
     user_input_lower = user_input.lower()
 
-    # Analyze sentiment
+    # Sentiment Analysis
     sentiment = TextBlob(user_input).sentiment
     polarity = sentiment.polarity
     sentiment_label = "Neutral"
@@ -168,21 +147,21 @@ def chatbot_ai_response(request):
     elif polarity < -0.1:
         sentiment_label = "Negative"
 
-    # Check for therapist recommendation keywords
+    # Therapist Recommendation
     if "therapist" in user_input_lower or "recommend" in user_input_lower:
-        therapists = Therapist.objects.all()[:3]  # Fetch up to 3 entries
+        therapists = Therapist.objects.all()[:3]
         if therapists:
-            recs = []
-            for therapist in therapists:
-                rec = f"{therapist.name} ({therapist.specialization}) - {therapist.location}. Call: {therapist.phone}"
-                recs.append(rec)
+            recs = [
+                f"{t.name} ({t.specialization}) - {t.location}. Call: {t.phone}"
+                for t in therapists
+            ]
             response_text = "Here are some therapist recommendations: " + " | ".join(recs)
         else:
             response_text = "I'm sorry, I don't have any therapist recommendations at the moment."
 
-    # Check for video request keywords
+    # Video Recommendation
     elif "video" in user_input_lower or "watch" in user_input_lower:
-        videos = Video.objects.all()[:1]  # Fetch one video recommendation
+        videos = Video.objects.all()[:1]
         if videos:
             video = videos[0]
             response_text = (
@@ -194,18 +173,21 @@ def chatbot_ai_response(request):
         else:
             response_text = "I'm sorry, I don't have any video recommendations at the moment."
     else:
-        # Standard chatbot response
         bot_response = bot.get_response(user_input)
         response_text = str(bot_response)
 
-    #response_text += f"\n\n🧠 Sentiment Analysis: {sentiment_label} (Polarity: {polarity:.2f})"
-    
-    # Save the conversation
+    # Save conversation
     if request.user.is_authenticated:
-        Conversation.objects.create(user=request.user, message=user_input, response=response_text)
+        today = timezone.now().date()
+        session = ConversationSession.objects.filter(user=request.user, start_time__date=today).last()
+        if not session:
+            session_title = create_session_title(user_input)
+            session = ConversationSession.objects.create(user=request.user, title=session_title)
+        Conversation.objects.create(user=request.user, session=session, message=user_input, response=response_text)
         return JsonResponse({'ai_response': response_text})
-    
-    
+
+    else:
+        return JsonResponse({'ai_response': "Sorry, something went wrong. Please log in and try again."}, status=403)
 
 def custom_logout_view(request):
     logout(request)
@@ -228,3 +210,44 @@ if __name__ == "__main__":
         
         response = get_response(user_input)
         print(f"Bot: {response}")
+
+
+@login_required
+def load_session_view(request):
+    session_id = request.GET.get("session_id")
+    try:
+        session = ConversationSession.objects.get(id=session_id, user=request.user)
+        # Get all conversation messages for this session
+        convs = Conversation.objects.filter(session=session).order_by('timestamp')
+        messages_data = []
+        for conv in convs:
+            # You can decide what to include here – for now, include type and text
+            messages_data.append({
+                "type": "user",
+                "text": conv.message,
+            })
+            messages_data.append({
+                "type": "ai",
+                "text": conv.response,
+            })
+        return JsonResponse({"messages": messages_data})
+    except ConversationSession.DoesNotExist:
+        return JsonResponse({"error": "Session not found."}, status=404)
+    
+def get_recent_conversations(request):
+    if request.user.is_authenticated:
+        # Fetch recent conversation sessions for the logged-in user
+        sessions = ConversationSession.objects.filter(user=request.user).order_by('-start_time')[:10]
+        recent_conversations = [
+            {
+                'id': session.id,
+                'title': session.title,
+                'start_time': session.start_time.strftime('%Y-%m-%d %H:%M:%S')
+            }
+            for session in sessions
+        ]
+        return JsonResponse({'recent_conversations': recent_conversations})
+    else:
+        return JsonResponse({'error': 'User not authenticated'}, status=403)
+
+  
