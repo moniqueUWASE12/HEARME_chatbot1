@@ -1,4 +1,4 @@
-##HearMe Chatbot 
+**HearMe Chatbot** 
 
 Aline BARAKABAHO
 Sonia NIYONSABA
