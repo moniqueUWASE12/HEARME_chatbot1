@@ -7,8 +7,8 @@
 ## 🌟 Features
 
 - 💬 **AI Chatbot**: Supports conversational interaction for mental health support.
-- 🔊 **Audio Responses** *(coming soon)*: Converts bot replies to audio for users who prefer listening.
-- 🏥 **Therapist & Hospital Recommendations** *(planned)*: Suggests real professionals or institutions for further help.
+- 🔊 **Audio Responses**: Converts bot replies to audio for users who prefer listening.
+- 🏥 **Therapist & Hospital Recommendations**: Suggests real professionals or institutions for further help.
 - 💾 **Conversation Storage**: Stores user conversations securely in the database.
 - 👩‍💻 **User Interface**: Clean frontend with HTML/CSS and Django templates.
 
