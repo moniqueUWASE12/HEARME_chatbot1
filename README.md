@@ -24,7 +24,7 @@
 ---
 
 ## 👩‍💻 Collaborators
-**This project is developed by:
+**This project is developed by:**
 
 Aline BARAKABAHO
 
