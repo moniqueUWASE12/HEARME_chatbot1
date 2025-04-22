@@ -1,5 +1,4 @@
-# HearMe Chatbot ![HearMe_Lgo](https://github.com/user-attachments/assets/fe841d11-abf9-4e48-ad87-5d6ca3d43513)
-🧠
+# HearMe Chatbot 🤖🧠
 
 **HearMe Chatbot** is an AI-powered virtual therapist designed to assist users with their mental health needs. Built with Django, it provides an interactive platform where users can chat with a supportive bot, receive basic guidance, and find recommendations for real-world help if needed.
 
