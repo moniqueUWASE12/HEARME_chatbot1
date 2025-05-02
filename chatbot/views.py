@@ -22,6 +22,8 @@ from django.utils import timezone
 from datetime import timedelta
 # Import your new model
 from .models import ConversationSession
+from django.core.cache import cache
+from nltk.sentiment import SentimentIntensityAnalyzer
 
 
 # Initialize chatbot (no training here!)
@@ -131,25 +133,35 @@ def create_session_title(user_input):
     title = user_input.strip()
     if len(title) > 40:
         title = title[:40] + "..."
-    return title or "New Conversation"    
+    return title or "New Conversation"  
+analyzer = SentimentIntensityAnalyzer()
+
+def analyze_sentiment(user_input):
+    scores = analyzer.polarity_scores(user_input)
+    if scores['compound'] > 0.1:
+        return "Positive"
+    elif scores['compound'] < -0.1:
+        return "Negative"
+    return "Neutral"  
 
 
 def chatbot_ai_response(request):
-    user_input = request.POST.get('user_input', '')
+    user_input = request.POST.get('user_input', '').strip()
     user_input_lower = user_input.lower()
+    cache_key = f"chatbot_response_{user_input}"
+    cached_response = cache.get(cache_key)
 
+    if cached_response:
+        return JsonResponse({'ai_response': cached_response})
+    
     # Sentiment Analysis
-    sentiment = TextBlob(user_input).sentiment
-    polarity = sentiment.polarity
-    sentiment_label = "Neutral"
-    if polarity > 0.1:
-        sentiment_label = "Positive"
-    elif polarity < -0.1:
-        sentiment_label = "Negative"
+    sentiment_label = analyze_sentiment(user_input)
+
+
 
     # Therapist Recommendation
     if "therapist" in user_input_lower or "recommend" in user_input_lower:
-        therapists = Therapist.objects.all()[:3]
+        therapists = get_cached_therapists()
         if therapists:
             recs = [
                 f"{t.name} ({t.specialization}) - {t.location}. Call: {t.phone}"
@@ -161,7 +173,7 @@ def chatbot_ai_response(request):
 
     # Video Recommendation
     elif "video" in user_input_lower or "watch" in user_input_lower:
-        videos = Video.objects.all()[:1]
+        videos = get_cached_videos()
         if videos:
             video = videos[0]
             response_text = (
@@ -184,10 +196,26 @@ def chatbot_ai_response(request):
             session_title = create_session_title(user_input)
             session = ConversationSession.objects.create(user=request.user, title=session_title)
         Conversation.objects.create(user=request.user, session=session, message=user_input, response=response_text)
+        cache.set(cache_key, response_text, timeout=3600)  # Cache for 1 hour
         return JsonResponse({'ai_response': response_text})
 
     else:
         return JsonResponse({'ai_response': "Sorry, something went wrong. Please log in and try again."}, status=403)
+ 
+
+def get_cached_therapists():
+    therapists = cache.get('therapist_recommendations')
+    if not therapists:
+        therapists = list(Therapist.objects.only('name', 'specialization', 'location', 'phone')[:3])
+        cache.set('therapist_recommendations', therapists, timeout=3600)  # Cache for 1 hour
+    return therapists
+
+def get_cached_videos():
+    videos = cache.get('video_recommendations')
+    if not videos:
+        videos = list(Video.objects.only('title', 'description', 'video_url')[:1])
+        cache.set('video_recommendations', videos, timeout=3600)  # Cache for 1 hour
+    return videos
 
 def custom_logout_view(request):
     logout(request)
