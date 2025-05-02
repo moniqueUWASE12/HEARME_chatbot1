@@ -198,6 +198,7 @@ function sendMessage() {
 
     // Show the loader
     const loaderContainer = showLoader();
+
     fetchWithTimeout('/chatbot/response/', {
     method: 'POST',
     headers: {
@@ -208,48 +209,65 @@ function sendMessage() {
 })
     .then(response => response.json())
     .then(data => {
-        // Remove the loader
-        if (chatBox.contains(loaderContainer)) {
-            chatBox.removeChild(loaderContainer);
-        }
-
-        const aiMsg = document.createElement("div");
-        aiMsg.classList.add("message", "ai-message");
-
-        if (data.ai_response.includes("Watch here:")) {
-            const parts = data.ai_response.split("Watch here:");
-            aiMsg.innerHTML = parts[0] + `<br><iframe width="300" height="200" src="${parts[1].trim()}" frameborder="0" allowfullscreen></iframe>`;
-        } else {
-            aiMsg.innerText = data.ai_response;
-        }
-
-        chatBox.appendChild(aiMsg);
-        chatBox.scrollTop = chatBox.scrollHeight;
-        conversations.push({ type: "ai", text: data.ai_response });
-
-        // If not muted, speak the AI response
-        if (!isMuted) {
-            const utterance = new SpeechSynthesisUtterance(data.ai_response);
-            utterance.lang = selectedLanguage === 'kinyarwanda' ? 'rw-RW' : 'en-US';
-            const voices = window.speechSynthesis.getVoices();
-            const matchingVoice = voices.find(v => v.lang === utterance.lang);
-            if (matchingVoice) {
-                utterance.voice = matchingVoice;
-            }
-            window.speechSynthesis.speak(utterance);
-        }
+        // Handle response
     })
     .catch(error => {
-        // Remove the loader
-        if (chatBox.contains(loaderContainer)) {
-            chatBox.removeChild(loaderContainer);
-        }
-        const errorMsg = document.createElement("div");
-        errorMsg.classList.add("message", "ai-message");
-        errorMsg.innerText = "Sorry, something went wrong.";
-        chatBox.appendChild(errorMsg);
-        chatBox.scrollTop = chatBox.scrollHeight;
+        // Handle timeout or other errors
     });
+
+    // Fetch AI response
+    fetch('/chatbot/response/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCsrfToken(),
+        },
+        body: 'user_input=' + encodeURIComponent(userInput),
+    })
+        .then(response => response.json())
+        .then(data => {
+            // Remove the loader
+            if (chatBox.contains(loaderContainer)) {
+                chatBox.removeChild(loaderContainer);
+            }
+
+            const aiMsg = document.createElement("div");
+            aiMsg.classList.add("message", "ai-message");
+
+            if (data.ai_response.includes("Watch here:")) {
+                const parts = data.ai_response.split("Watch here:");
+                aiMsg.innerHTML = parts[0] + `<br><iframe width="300" height="200" src="${parts[1].trim()}" frameborder="0" allowfullscreen></iframe>`;
+            } else {
+                aiMsg.innerText = data.ai_response;
+            }
+
+            chatBox.appendChild(aiMsg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            conversations.push({ type: "ai", text: data.ai_response });
+
+            // If not muted, speak the AI response
+            if (!isMuted) {
+                const utterance = new SpeechSynthesisUtterance(data.ai_response);
+                utterance.lang = selectedLanguage === 'kinyarwanda' ? 'rw-RW' : 'en-US';
+                const voices = window.speechSynthesis.getVoices();
+                const matchingVoice = voices.find(v => v.lang === utterance.lang);
+                if (matchingVoice) {
+                    utterance.voice = matchingVoice;
+                }
+                window.speechSynthesis.speak(utterance);
+            }
+        })
+        .catch(error => {
+            // Remove the loader
+            if (chatBox.contains(loaderContainer)) {
+                chatBox.removeChild(loaderContainer);
+            }
+            const errorMsg = document.createElement("div");
+            errorMsg.classList.add("message", "ai-message");
+            errorMsg.innerText = "Sorry, something went wrong.";
+            chatBox.appendChild(errorMsg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
 }
 
 

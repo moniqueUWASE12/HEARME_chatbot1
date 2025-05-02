@@ -200,6 +200,5 @@ list_trainer.train(list_to_train)
 
 corpus_trainer = ChatterBotCorpusTrainer(bot)
 corpus_trainer.train('chatterbot.corpus.english')
-
 print("✅ Chatbot training completed!")
    

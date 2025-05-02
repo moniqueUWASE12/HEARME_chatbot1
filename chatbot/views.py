@@ -20,26 +20,31 @@ from textblob import TextBlob
 from chatterbot.trainers import ListTrainer, ChatterBotCorpusTrainer
 from django.utils import timezone
 from datetime import timedelta
+import time
 # Import your new model
 from .models import ConversationSession
 from django.core.cache import cache
 from nltk.sentiment import SentimentIntensityAnalyzer
+from django.views.decorators.cache import cache_page
 
 
 # Initialize chatbot (no training here!)
 bot = ChatBot(
     'HearMe',
-    read_only=False,  # Optional: prevent it from learning from user input
+    storage_adapter='chatterbot.storage.SQLStorageAdapter',
+    database_uri='sqlite:///db.sqlite3',  # Shared DB with Django
+    read_only=True,
     logic_adapters=[
-                {
-                'import_path': 'chatterbot.logic.BestMatch',
-                'default_response': "I'm here to listen. Could you tell me more about what you're experiencing?",
-                'maximum_similarity_threshold': 0.95,  # Slightly lowered to catch more variations
-                'statement_comparison_function': LevenshteinDistance,
-                'response_selection_method': get_most_frequent_response
-                }
-                ]
+        {
+            'import_path': 'chatterbot.logic.BestMatch',
+            'default_response': "I'm here to listen. Could you tell me more about what you're experiencing?",
+            'maximum_similarity_threshold': 0.95,
+            'statement_comparison_function': LevenshteinDistance,
+            'response_selection_method': get_most_frequent_response
+        }
+    ]
 )
+
 
 
 def welcome_view(request):
@@ -144,8 +149,9 @@ def analyze_sentiment(user_input):
         return "Negative"
     return "Neutral"  
 
-
+@cache_page(60 * 1)
 def chatbot_ai_response(request):
+    start_time = time.time()
     user_input = request.POST.get('user_input', '').strip()
     user_input_lower = user_input.lower()
     cache_key = f"chatbot_response_{user_input}"
@@ -185,6 +191,7 @@ def chatbot_ai_response(request):
         else:
             response_text = "I'm sorry, I don't have any video recommendations at the moment."
     else:
+        bot_start = time.time()
         bot_response = bot.get_response(user_input)
         response_text = str(bot_response)
 
@@ -196,13 +203,14 @@ def chatbot_ai_response(request):
             session_title = create_session_title(user_input)
             session = ConversationSession.objects.create(user=request.user, title=session_title)
         Conversation.objects.create(user=request.user, session=session, message=user_input, response=response_text)
-        cache.set(cache_key, response_text, timeout=3600)  # Cache for 1 hour
-        return JsonResponse({'ai_response': response_text})
+        cache.set(cache_key, response_text, timeout=3600)
 
+        total_duration = time.time() - start_time
+        print(f"[DEBUG] Total chatbot_ai_response time: {total_duration:.4f} seconds")
+
+        return JsonResponse({'ai_response': response_text})
     else:
         return JsonResponse({'ai_response': "Sorry, something went wrong. Please log in and try again."}, status=403)
- 
-
 def get_cached_therapists():
     therapists = cache.get('therapist_recommendations')
     if not therapists:
