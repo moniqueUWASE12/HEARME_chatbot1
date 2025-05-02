@@ -198,7 +198,6 @@ function sendMessage() {
 
     // Show the loader
     const loaderContainer = showLoader();
-
     fetchWithTimeout('/chatbot/response/', {
     method: 'POST',
     headers: {
