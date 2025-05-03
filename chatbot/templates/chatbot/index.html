@@ -14,47 +14,26 @@
                 <i>🗨️</i> New Chat
             </div>
             <h3>Recent Conversations</h3>
-            <div id="recentConversations">
-                <!-- Recent conversations will be dynamically loaded here -->
-            <!-- Today’s Sessions -->
-            {% if sessions_today %}
-            <div class="conversation-group">
-                <h4>Today</h4>
-                {% for session in sessions_today %}
-                    <div class="recent-chat" onclick="loadSession('{{ session.id }}')">
-                        {{ session.title }}
+            {% for group in session_groups %}
+            <h3>{{ group.label }}</h3>
+            <ul>
+              {% for session in group.sessions %}
+                <li class="conversation-item">
+                  <span>{{ session.title }}</span>
+                  <div class="menu-container">
+                    <button class="menu-toggle" onclick="toggleMenu(this)">⋮</button>
+                    <div class="menu-dropdown">
+                      <button onclick="loadSession('{{ session.id }}')">View</button>
+                      <button onclick="deleteSession('{{ session.id }}')">Delete</button>
                     </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-        
-            <!-- Yesterday’s Sessions -->
-            {% if sessions_yesterday %}
-            <div class="conversation-group">
-                <h4>Yesterday</h4>
-                {% for session in sessions_yesterday %}
-                    <div class="recent-chat" onclick="loadSession('{{ session.id }}')">
-                        {{ session.title }}
-                    </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-        
-            <!-- Last 7 Days -->
-            {% if sessions_last_week %}
-            <div class="conversation-group">
-                <h4>Previous 7 Days</h4>
-                {% for session in sessions_last_week %}
-                    <div class="recent-chat" onclick="loadSession('{{ session.id }}')">
-                        {{ session.title }}
-                    </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-            </div>
-        </div>
-        
-
+                  </div>
+                </li>
+              {% empty %}
+                <li>No conversations for {{ group.label|lower }}.</li>
+              {% endfor %}
+            </ul>
+          {% endfor %}
+</div>
         <div class="chat-container">
             <div class="chat-header">
                 <img src="{% static 'chatbot/images/HearMe_Lgo.png' %}" class="logo"> HearMe 
@@ -97,7 +76,7 @@
             </div>
         </div>
     </div>
-
+    
     <script>
         const chatBox = document.getElementById("chatBox");
         const recentConversations = document.getElementById("recentConversations");
@@ -170,7 +149,7 @@ function showLoader() {
     return loaderContainer; // Return the loader container so it can be removed later
 }
 
-function fetchWithTimeout(url, options, timeout = 10000) {
+function fetchWithTimeout(url, options, timeout = 10) {
     return Promise.race([
         fetch(url, options),
         new Promise((_, reject) =>
@@ -358,6 +337,59 @@ function loadRecentConversations() {
 
 // Call the function to load recent conversations when the page loads
 window.onload = loadRecentConversations;
+
+// Toggle the dropdown menu
+function toggleMenu(button) {
+    const dropdown = button.nextElementSibling;
+    document.querySelectorAll('.menu-dropdown').forEach(menu => {
+        if (menu !== dropdown) menu.style.display = 'none'; // Close other menus
+    });
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+}
+
+// Close the dropdown menu when clicking outside
+window.addEventListener('click', function (e) {
+    if (!e.target.matches('.menu-toggle')) {
+        document.querySelectorAll('.menu-dropdown').forEach(menu => {
+            menu.style.display = 'none';
+        });
+    }
+});
+
+function deleteSession(sessionId) {
+    if (confirm("Are you sure you want to delete this conversation?")) {
+        fetch('/delete_session/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: `session_id=${sessionId}`,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("Conversation deleted!");
+                document.querySelector(`[data-session-id="${sessionId}"]`).remove();
+            } else {
+                alert("Error deleting session: " + (data.error || "Unknown error."));
+            }
+        })
+        .catch(error => {
+            console.error("Error deleting session:", error);
+            alert("An error occurred while deleting the session.");
+        });
+    }
+}
+
+function getCsrfToken() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') return value;
+    }
+    return null;
+}
 
     </script>
 </body>

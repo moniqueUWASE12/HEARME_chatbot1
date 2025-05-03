@@ -21,11 +21,14 @@ from chatterbot.trainers import ListTrainer, ChatterBotCorpusTrainer
 from django.utils import timezone
 from datetime import timedelta
 import time
-# Import your new model
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from .models import ConversationSession
 from django.core.cache import cache
 from nltk.sentiment import SentimentIntensityAnalyzer
 from django.views.decorators.cache import cache_page
+from django.utils.text import Truncator
+
 
 
 # Initialize chatbot (no training here!)
@@ -103,32 +106,35 @@ def signup_view(request):
     return render(request, "chatbot/signup.html")
 
 
+
 @login_required
 def chatbot_view(request):
     today = timezone.now().date()
     yesterday = today - timedelta(days=1)
     seven_days_ago = today - timedelta(days=7)
 
-    conversations_today = Conversation.objects.filter(user=request.user, timestamp__date=today)
-    conversations_yesterday = Conversation.objects.filter(user=request.user, timestamp__date=yesterday)
-    conversations_last_week = Conversation.objects.filter(
-        user=request.user,
-        timestamp__date__gte=seven_days_ago,
-        timestamp__date__lt=yesterday
-    )
 
-    chat_data = [
-        {'message': conv.message, 'response': conv.response, 'timestamp': conv.timestamp.strftime('%Y-%m-%d %H:%M:%S')}
-        for conv in conversations_today  # You can switch to show all if needed
-    ]
+    sessions_today = ConversationSession.objects.filter(user=request.user, start_time__date=today)
+    sessions_yesterday = ConversationSession.objects.filter(user=request.user, start_time__date=yesterday)
+    sessions_last_week = ConversationSession.objects.filter(
+        user=request.user, 
+        start_time__date__gte=seven_days_ago,
+        start_time__date__lt=yesterday
+    )
+    session_groups = [
+     {'label': 'Today', 'sessions': sessions_today},
+     {'label': 'Yesterday', 'sessions': sessions_yesterday},
+     {'label': 'Last 7 Days', 'sessions': sessions_last_week},
+]
+
 
     return render(request, 'chatbot/index.html', {
         'username': request.user.username,
-        'chat_data': chat_data,
-        'conversations_today_count': conversations_today.count(),
-        'conversations_yesterday_count': conversations_yesterday.count(),
-        'conversations_last_week_count': conversations_last_week.count(),
+        'session_groups': session_groups,
     })
+
+    
+
 def create_session_title(user_input):
     """
     Generates a title from the user's first message.
@@ -136,9 +142,7 @@ def create_session_title(user_input):
     For now, we simply return the first 40 characters.
     """
     title = user_input.strip()
-    if len(title) > 40:
-        title = title[:40] + "..."
-    return title or "New Conversation"  
+    return Truncator(title).chars(40) or "New Conversation"
 analyzer = SentimentIntensityAnalyzer()
 
 def analyze_sentiment(user_input):
@@ -203,7 +207,7 @@ def chatbot_ai_response(request):
             session_title = create_session_title(user_input)
             session = ConversationSession.objects.create(user=request.user, title=session_title)
         Conversation.objects.create(user=request.user, session=session, message=user_input, response=response_text)
-        cache.set(cache_key, response_text, timeout=3600)
+        cache.set(cache_key, response_text, timeout=60 * 0.5)
 
         total_duration = time.time() - start_time
         print(f"[DEBUG] Total chatbot_ai_response time: {total_duration:.4f} seconds")
@@ -286,4 +290,17 @@ def get_recent_conversations(request):
     else:
         return JsonResponse({'error': 'User not authenticated'}, status=403)
 
-  
+
+
+@login_required
+@csrf_exempt
+def delete_session(request):
+    if request.method == 'POST':
+        session_id = request.POST.get('session_id')
+        try:
+            session = ConversationSession.objects.get(id=session_id, user=request.user)
+            session.delete()
+            return JsonResponse({'success': True})
+        except ConversationSession.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Session not found.'})
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'})
