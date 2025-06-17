@@ -1,4 +1,5 @@
 {% load static %}
+{% load socialaccount %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,6 +16,14 @@
             <input type="password" name="password" placeholder="Password" required>
             <button type="submit">Login</button>
         </form>
+        <div class="google-login-container">
+            <p>or</p>
+            <a href="{% url 'social:begin' 'google-oauth2' %}" class="google-btn">
+                <img class="google-logo" src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
+                <span>Continue with Google</span>
+            </a>
+        </div>
+        
         <p>Don't have an account? <a href="{% url 'signup' %}">Sign Up</a></p>
     </div>
 </body>

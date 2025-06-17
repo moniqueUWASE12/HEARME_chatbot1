@@ -26,15 +26,15 @@
                   <div class="menu-container">
                     <button class="menu-toggle" onclick="toggleMenu(this)">⋮</button>
                     <div class="menu-dropdown">
-                      <button onclick="loadSession('{{ session.id }}')">View</button>
-                      <button onclick="deleteSession('{{ session.id }}')">Delete</button>
+                        <button onclick="loadSession('{{ session.id }}')">View</button>
+                        <button onclick="deleteSession('{{ session.id }}')">Delete</button>
                     </div>
-                  </div>
+                </div>
                 </li>
                 
               {% endfor %}
             </ul>
-          {% endfor %}
+        {% endfor %}
 </div>
         <div class="chat-container">
             <div class="chat-header">
@@ -281,7 +281,7 @@ function sendMessage() {
         sendMessage();
     }
 });
- 
+
 
 
         function toggleDropdown() {
@@ -303,7 +303,7 @@ function sendMessage() {
     
         function loadSession(sessionId) {
     // Fetch the session conversation details using a GET request.
-       fetch(`/chatbot/load_session/?session_id=${sessionId}`)
+        fetch(`/chatbot/load_session/?session_id=${sessionId}`)
         .then(response => response.json())
         .then(data => {
             chatBox.innerHTML = "";
