@@ -17,22 +17,22 @@
             {% for group in session_groups %}
             <h3>{{ group.label }}</h3>
             <ul>
-              {% for session in group.sessions %}
+            {% for session in group.sessions %}
                 <li class="conversation-item">
-                  <span>{{ session.title }}</span>
-                  <div class="menu-container">
+                <span>{{ session.title }}</span>
+                <div class="menu-container">
                     <button class="menu-toggle" onclick="toggleMenu(this)">⋮</button>
                     <div class="menu-dropdown">
-                      <button onclick="loadSession('{{ session.id }}')">View</button>
-                      <button onclick="deleteSession('{{ session.id }}')">Delete</button>
+                        <button onclick="loadSession('{{ session.id }}')">View</button>
+                        <button onclick="deleteSession('{{ session.id }}')">Delete</button>
                     </div>
-                  </div>
+                </div>
                 </li>
-              {% empty %}
+            {% empty %}
                 <li>No conversations for {{ group.label|lower }}.</li>
-              {% endfor %}
+            {% endfor %}
             </ul>
-          {% endfor %}
+        {% endfor %}
 </div>
         <div class="chat-container">
             <div class="chat-header">
@@ -272,7 +272,7 @@ function sendMessage() {
         sendMessage();
     }
 });
- 
+
 
 
         function toggleDropdown() {
@@ -294,7 +294,7 @@ function sendMessage() {
     
         function loadSession(sessionId) {
     // Fetch the session conversation details using a GET request.
-       fetch(`/chatbot/load_session/?session_id=${sessionId}`)
+        fetch(`/chatbot/load_session/?session_id=${sessionId}`)
         .then(response => response.json())
         .then(data => {
             chatBox.innerHTML = "";

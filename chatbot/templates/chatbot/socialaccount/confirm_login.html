@@ -1,0 +1,66 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Confirm Login - HearMe</title>
+    <link rel="stylesheet" href="{% static 'chatbot/css/auth.css' %}">
+    <style>
+        body {
+            background: #f5f5f5;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .confirm-login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .confirm-login-box h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .confirm-login-box p {
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        .btn-confirm {
+            padding: 12px 24px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn-confirm:hover {
+            background-color: #3367d6;
+        }
+    </style>
+</head>
+<body>
+    <div class="confirm-login-box">
+        <h2>Sign In Via {{ account.provider|title }}</h2>
+        <p>You are about to sign in using your Google account.</p>
+
+        <form method="post" action="">
+            {% csrf_token %}
+            <button type="submit" class="btn-confirm">Continue</button>
+        </form>
+    </div>
+</body>
+</html>

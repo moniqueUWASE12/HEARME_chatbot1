@@ -61,3 +61,33 @@ body {
 .auth-box a:hover {
     text-decoration: underline;
 }
+.google-login-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.google-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px; /* space between logo and text */
+    background-color: #fff;
+    color: #444;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px 15px;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.google-btn:hover {
+    background-color: #f7f7f7;
+}
+
+.google-logo {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    vertical-align: middle;
+}
