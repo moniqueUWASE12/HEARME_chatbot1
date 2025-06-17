@@ -51,5 +51,15 @@ class Video(models.Model):
 
     def __str__(self):
         return self.title
+    
+class Hospital(models.Model):
+    name = models.CharField(max_length=100)
+    location = models.CharField(max_length=200)
+    contact_info = models.TextField(blank=True)
+    #description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.name
+
 
 

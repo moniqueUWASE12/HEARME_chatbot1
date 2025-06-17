@@ -8,17 +8,20 @@
     <link rel="stylesheet" type="text/css" href="{% static 'chatbot/css/styles.css' %}">
 </head>
 <body>
+
     <div class="main-container">
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
+             
             <div class="new-chat" onclick="startNewChat()">
-                <i>🗨️</i> New Chat
+                <i>+</i> New Chat
             </div>
             <h3>Recent Conversations</h3>
             {% for group in session_groups %}
             <h3>{{ group.label }}</h3>
             <ul>
               {% for session in group.sessions %}
-                <li class="conversation-item">
+                <li class="conversation-item" data-session-id="{{ session.id }}">
+
                   <span>{{ session.title }}</span>
                   <div class="menu-container">
                     <button class="menu-toggle" onclick="toggleMenu(this)">⋮</button>
@@ -28,8 +31,7 @@
                     </div>
                   </div>
                 </li>
-              {% empty %}
-                <li>No conversations for {{ group.label|lower }}.</li>
+                
               {% endfor %}
             </ul>
           {% endfor %}
@@ -213,37 +215,44 @@ function sendMessage() {
             const aiMsg = document.createElement("div");
             aiMsg.classList.add("message", "ai-message");
 
-            if (data.ai_response.includes("Watch here:")) {
-                const parts = data.ai_response.split("Watch here:");
-                aiMsg.innerHTML = parts[0] + `<br><iframe width="300" height="200" src="${parts[1].trim()}" frameborder="0" allowfullscreen></iframe>`;
-            } else {
-                aiMsg.innerText = data.ai_response;
-            }
+    // Handle structured responses (e.g., video links)
+    if (data.ai_response.includes("Watch here:")) {
+        const parts = data.ai_response.split("Watch here:");
+        aiMsg.innerHTML = parts[0] + `<br><iframe width="300" height="200" src="${parts[1].trim()}" frameborder="0" allowfullscreen></iframe>`;
+    } else {
+        aiMsg.innerText = data.ai_response;
+    }
+    if (data.sentiment) {
+        const sentimentDiv = document.createElement("div");
+        sentimentDiv.classList.add("sentiment-label");
+        sentimentDiv.innerText = `Sentiment: ${data.sentiment}`;
+        aiMsg.appendChild(sentimentDiv);
+    }
 
-            chatBox.appendChild(aiMsg);
-            chatBox.scrollTop = chatBox.scrollHeight;
-            conversations.push({ type: "ai", text: data.ai_response });
+    chatBox.appendChild(aiMsg);
+    chatBox.scrollTop = chatBox.scrollHeight;
 
-            // If not muted, speak the AI response
-            if (!isMuted) {
-                const utterance = new SpeechSynthesisUtterance(data.ai_response);
-                utterance.lang = selectedLanguage === 'kinyarwanda' ? 'rw-RW' : 'en-US';
-                const voices = window.speechSynthesis.getVoices();
-                const matchingVoice = voices.find(v => v.lang === utterance.lang);
-                if (matchingVoice) {
-                    utterance.voice = matchingVoice;
-                }
-                window.speechSynthesis.speak(utterance);
-            }
+    // If not muted, speak the AI response
+    if (!isMuted) {
+        const utterance = new SpeechSynthesisUtterance(data.ai_response);
+        utterance.lang = selectedLanguage === 'kinyarwanda' ? 'rw-RW' : 'en-US';
+        const voices = window.speechSynthesis.getVoices();
+        const matchingVoice = voices.find(v => v.lang === utterance.lang);
+        if (matchingVoice) {
+            utterance.voice = matchingVoice;
+        }
+        window.speechSynthesis.speak(utterance);
+    }
         })
         .catch(error => {
             // Remove the loader
             if (chatBox.contains(loaderContainer)) {
                 chatBox.removeChild(loaderContainer);
             }
+            console.error("Error fetching GPT-2 response:", error);
             const errorMsg = document.createElement("div");
             errorMsg.classList.add("message", "ai-message");
-            errorMsg.innerText = "Sorry, something went wrong.";
+            errorMsg.innerText = "Sorry, something went wrong. Please try again later.";
             chatBox.appendChild(errorMsg);
             chatBox.scrollTop = chatBox.scrollHeight;
         });
@@ -358,13 +367,15 @@ window.addEventListener('click', function (e) {
 
 function deleteSession(sessionId) {
     if (confirm("Are you sure you want to delete this conversation?")) {
-        fetch('/delete_session/', {
+        fetch(`/chatbot/delete/delete_session/${sessionId}/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'X-CSRFToken': getCsrfToken(),
             },
-            body: `session_id=${sessionId}`,
+            body: new URLSearchParams({
+                '_method': 'DELETE'
+            })
         })
         .then(response => response.json())
         .then(data => {
@@ -382,6 +393,7 @@ function deleteSession(sessionId) {
     }
 }
 
+
 function getCsrfToken() {
     const cookies = document.cookie.split(';');
     for (let cookie of cookies) {
@@ -390,6 +402,7 @@ function getCsrfToken() {
     }
     return null;
 }
+
 
     </script>
 </body>

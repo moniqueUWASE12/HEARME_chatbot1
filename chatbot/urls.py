@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from . import views
 
@@ -13,7 +13,9 @@ urlpatterns = [
     #path('chatbot/get_response/', views.get_response, name='get_response'),
     path('recent_conversations/', views.get_recent_conversations, name='recent_conversations'),
     path('load_session/', views.load_session_view, name='load_session'),
-    path('delete_session/', views.delete_session, name='delete_session'),
+   path('chatbot/delete/delete_session/<int:session_id>/', views.delete_session, name='delete_session'),
+    path("chatbot-reply/", views.generate_gpt2_response, name="chatbot_reply"),
+    path('auth/', include('social_django.urls', namespace='social')),
 
    
     
