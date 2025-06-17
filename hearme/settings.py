@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from decouple import config
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -22,10 +23,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = (
-    'django-insecure-4eg&8ye*rz11!ypgo6l5xzqx!^-)!'
-    'jjf8y2jv4tqqlsag6-338'
-)
+SECRET_KEY = config('SECRET_KEY')
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -92,12 +91,12 @@ WSGI_APPLICATION = 'hearme.wsgi.application'
 
 DATABASES = {
     'default': {
-         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'hearme_db',
-        'USER': 'root',
-        'PASSWORD': 'monique221002771',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
 
     }
 }
@@ -164,10 +163,4 @@ LOGIN_REDIRECT_URL = '/chatbot/chat/'
 ACCOUNT_LOGOUT_REDIRECT_URL = '/chatbot/login/'
 
 
-AUTHENTICATION_BACKENDS = (
-    'social_core.backends.google.GoogleOAuth2',
-    'django.contrib.auth.backends.ModelBackend',
-)
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '330423665332-7fisp17nb0ujqrao1c468ia8pgviupa9.apps.googleusercontent.com'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'

@@ -18,7 +18,7 @@
         </form>
         <div class="google-login-container">
             <p>or</p>
-            <a href="{% url 'social:begin' 'google-oauth2' %}" class="google-btn">
+            <a href="{% provider_login_url 'google' %}" class="google-btn">
                 <img class="google-logo" src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
                 <span>Continue with Google</span>
             </a>
